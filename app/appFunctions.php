@@ -1,20 +1,26 @@
 <?php
+$ROOT = "/home/it490/git/IT490-backend";
+require_once("$ROOT/rabbit/path.inc");
+require_once("$ROOT/rabbit/get_host_info.inc");
+require_once("$ROOT/rabbit/rabbitMQLib.inc");
 
-require_once('path.inc');
-require_once('get_host_info.inc');
-require_once('rabbitMQLib.inc');
+require_once("$ROOT/sql/dbConnection.php"); //establishes connection to database
 
-require_once('login.php.inc');
-require_once('dbConnection.php'); //establishes connection to database
-require_once('dbClient.php'); //sends requests to dmz
+function dbClient($request) {
+	$client = new rabbitMQClient("$ROOT/app/appServerMQ.ini","DMZServer");
+	$response = $client->send_request($request);
+	return $response;
+}
 
-//function to create session
-function createSession($email) {
-	$mydb = dbConnection();
-	$sessionID = SHA1($email.time());
-	$sessionQuery = "INSERT INTO Sessions VALUES ('$email', '$sessionID', NOW())";
-	$result = $mydb->query($sessionQuery);
-	return $sessionID;
+//function to retrieve email from sessionID
+function selectEmailFromSession($sessionID) {
+ 	$mydb = dbConnection();
+	$query = "SELECT email FROM Sessions WHERE sessionID = '$sessionID'";
+	$result = $mydb->query($query);
+	$session = $result->fetch_assoc();
+	if ($result->num_rows == 1) {
+		return $session['email'];
+	}
 }
 
 //function to valid session
@@ -39,49 +45,6 @@ function validateSession($sessionID) {
 	}
 }
 
-//function for user login
-function doLogin($email, $password) {
-	$mydb = dbConnection();
-	$hash = SHA1($password);
-	$query = "SELECT * FROM Users WHERE email = '$email' AND password = '$hash'";
-	$result = $mydb->query($query);
-	$user = $result->fetch_assoc();
-	$first = $user['first'];
-	$last = $user['last'];
-	if ($result->num_rows == 1) {
-		return json_encode(['fname' => $first, 'lname' => $last, 'email' => $email, 'sessionID' => createSession($email)]);
-	}
-	else {
-		return json_encode(['message' => 'wrong email/password']);
-	}
-}
-
-//function for user registration
-function doRegister($first, $last, $email, $password) {
-	$mydb = dbConnection();
-	$hash = SHA1($password);
-	$query = "SELECT * FROM Users WHERE email = '$email'";
-	$result = $mydb->query($query);
-	if ($result->num_rows == 1 ) {
-		return json_encode(['message' => 'That email address is in use']);
-	}
-	else {
-		$registerQuery = "INSERT INTO Users VALUES ('$first', '$last','$email', '$hash')";
-		$result =$mydb->query($registerQuery);
-		return json_encode(['fname' => $first, 'lname' => $last, 'email' => $email, 'sessionID' => createSession($email)]);
-	}
-}
-
-//function to retrieve email from sessionID
-function selectEmailFromSession($sessionID) {
- 	$mydb = dbConnection();
-	$query = "SELECT email FROM Sessions WHERE sessionID = '$sessionID'";
-	$result = $mydb->query($query);
-	$session = $result->fetch_assoc();
-	if ($result->num_rows == 1) {
-		return $session['email'];
-	}
-}
 
 //function to add user's groceries
 function addGroceries($sessionID, $groceries) {
@@ -102,15 +65,6 @@ function addGroceries($sessionID, $groceries) {
 	return json_encode(["message" => "added groceries"]);
 }
 
-/*
-function addToGroceryList($sessionID, $item) {
-	$mydb = dbConnection();
-	$email = selectEmailFromSession($sessionID);
-	$query = "INSERT INTO Groceries (email, item) VALUES ('$email, '$item')";
-	$result = $mydb->($query);
-	return json_encode(['message' => 'Added groceries to list']);
-}
- */
 
 //function to get the user's current groceries and grocery list
 function getUserGroceries($sessionID) {
@@ -175,16 +129,7 @@ function saveRateRecipe($sessionID, $recipe) {
 	return json_encode(["message" => "succesfully saved/rated"]);
 }
 	
-/*S
-function rateRecipe($sessionID, $recipe) {
-	$mydb = dbConnection();
-	$email = selectEmailFromSession($sessionID);
-	$query = "INSERT INTO Saved_Rated_Recipes (email, recipeID, title, imgURL, sourceURL, rating) VALUES ('$email','$recipe['recipeID'], '$recipe['title]', '$recipe['imgURL'], '$recipe['sourceURL'], '$recipe['rating'])";
-	$result = $mydb->query($query);
-}
- */
 
-//function to view rated recipes for each user
 function viewRatedRecipes($sessionID) {
 	$mydb = dbConnection();
 	$email = selectEmailFromSession($sessionID);
@@ -192,12 +137,10 @@ function viewRatedRecipes($sessionID) {
 	$result = $mydb->query($query);
 	if ($result->num_rows == 0) {
 		echo "you have not rated any recipes";
-		return json_encode(["message" => "you have not rated any recipes"]);
 	}
-	else {
-		$userRatedRecipes = $result->fetch_all(MYSQLI_ASSOC);
-		return json_encode(["userRatedRecipes" => $userRatedRecipes]);
-	}
+	$userRatedRecipes = $result->fetch_all(MYSQLI_ASSOC);
+	return json_encode(["userRatedRecipes" => $userRatedRecipes]);
+	
 }
 
 //function to store user-created recipes
@@ -210,6 +153,7 @@ function storeUserRecipe($sessionID, $userRecipe) {
 	$makerOfRecipe = selectEmailFromSession($sessionID);
 	$query = "INSERT INTO User_Recipes (title, description, instructions, maxReadyTime, makerOfRecipe) VALUES ('$title', '$description', '$instructions', '$maxReadyTime', '$makerOfRecipe')";
 	$result = $mydb->query($query);
+	echo "new user recipe added\n";
 	return json_encode(['messasge' => 'your recipe has been stored']);
 }
 
@@ -220,6 +164,7 @@ function getUserRecipe($sessionID) {
 	$query = "SELECT * FROM User_Recipes WHERE makerOfRecipe = '$email'";
 	$result = $mydb->query($query);
 	$getUserRecipes = $result->fetch_all(MYSQLI_ASSOC);
+	print_r($getUserRecipes);
 	return json_encode(["getUserRecipes" => $getUserRecipes]);
 }
 

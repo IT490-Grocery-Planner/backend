@@ -1,16 +1,15 @@
 #!/usr/bin/php
 <?php
-require_once('path.inc');
-require_once('get_host_info.inc');
-require_once('rabbitMQLib.inc');
-require_once('login.php.inc');
+$ROOT = "/home/it490/git/IT490-backend";
+require_once("$ROOT/rabbit/path.inc");
+require_once("$ROOT/rabbit/get_host_info.inc");
+require_once("$ROOT/rabbit/rabbitMQLib.inc");
 
-require_once('dbConnection.php'); //connects to the database
-require_once('dbFunctions.php'); //functions for the database
+require_once("$ROOT/auth/authFunctions.php"); //functions for the database
 
 function requestProcessor($request) {
 	echo "received request".PHP_EOL;
-	$errorClient = new rabbitMQClient("serversMQ.ini", "ErrorLogging");
+	$errorClient = new rabbitMQClient("$ROOT/error_log/errorServerMQ.ini", "errorLogging");
 	try {
 	var_dump($request);
 	if(!isset($request['type'])) {
@@ -30,6 +29,7 @@ function requestProcessor($request) {
 	}
 	catch (Exception $e) {
 		$errorClient->send_request(['type' => 'DBerrors', 'error' => $e->getMessage()]);
+		echo $e->getMessage();
 	}
 
 	return array("returnCode" => '0', 'message'=>"Server received request and processed");
@@ -42,7 +42,7 @@ function logerror($type, $error) {
         return json_encode(["message" => "Error received"]);
 }
 
-$authServer = new rabbitMQServer("serversMQ.ini","authServer");
+$authServer = new rabbitMQServer("$ROOT/auth/authServerMQ.ini", "authServer");
 $authServer->process_requests('requestProcessor');
 exit();
 ?>

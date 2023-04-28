@@ -1,7 +1,7 @@
 #!/usr/bin/php
 <?php
 require_once('path.inc');
-//require_once('get_host_info.inc');
+require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('login.php.inc');
 
@@ -30,7 +30,7 @@ function requestProcessor($request) {
 	return array("returnCode" => '0', 'message' => "unsupported error type");
 }
 
-$server = new rabbitMQServer("serversMQ.ini", "ErrorLogging");
+$server = new rabbitMQServer("errorServerMQ.ini", "errorLogging");
 
 echo "Error Logger BEGIN".PHP_EOL;
 $server->process_requests('requestProcessor');
