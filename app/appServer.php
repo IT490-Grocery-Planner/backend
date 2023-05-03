@@ -25,6 +25,8 @@ function requestProcessor($request) {
 		switch ($request['type']) {
 			case "keywordrecipe":
 				return searchKeywordRecipe($request['keyword']);
+			case "videorecipe":
+				return searchVideoRecipe($request['keyword']);
 			case "groceryrecipe":
 				return searchGroceryRecipe($request['sessionID']);
 			case "expirerecipe":

@@ -7,6 +7,7 @@ require_once("$ROOT/rabbit/rabbitMQLib.inc");
 require_once("$ROOT/sql/dbConnection.php"); //establishes connection to database
 
 function dbClient($request) {
+	$ROOT = "/home/it490/git/IT490-backend";
 	$client = new rabbitMQClient("$ROOT/app/appServerMQ.ini","DMZServer");
 	$response = $client->send_request($request);
 	return $response;
@@ -180,30 +181,18 @@ function searchKeywordRecipe($keyword) {
 	}
 }
 
-/*
-function dmzRecipe($title, $description, $instructions, $maxReadyTime) {
-	$request = array();
-	$request['type'] = array('keywordrecipe', 'groceryrecipe', 'expirerecipe');
-	$request['titleMatch'] = $title;
-	$request['addRecipeInformation'] = $description;
-	$request['instructionsRequired'] = $instructions;
-	$request['maxReadyTime'] = $maxReadyTime;
-	$response = dbClient($request);
-	echo var_dump($response);
-	return $response;
+function searchVideoRecipe($keyword) {
+	$mydb = dbConnection();
+	$query = "SELECT * FROM Recipes WHERE title LIKE '%$keyword%'";
+	$result = $mydb->query($query);
+	if ($result->num_rows == 0) {
+		$response = dbClient(["type" => "videorecipe", "videorecipe" => $keyword]);
+		echo $response;
+		return $response;
+	}
 }
 
-function addRecipeDB($title, $description, $instrictions, $maxReadyTime) {
-	$mydb = dbConnection();
-	for ($i = 0; $i < count($recipes); $i++) {
-		$recipeID = $recipes[$i]['recipeID'];
-		$title = $recipes[$i]['title'];
-		$description = $recipes[$i]['description'];
-		$instructions = $recipes[$i]['instructions'];
-		$maxReadyTiem = $recipes[$i]['maxReadyTime'];
-		$query = "INSERT INTO Recipes VALUES ('$recipeID', '$title', '$description', '$instructions', '$maxReadyTime')";
-		$result = $mydb->query($query);
- */
+
 
 //function to search for recipes based on current groceries
 function searchGroceryRecipe($sessionID) {
